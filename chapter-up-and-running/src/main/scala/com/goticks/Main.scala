@@ -11,21 +11,19 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.ActorMaterializer
 
-import com.typesafe.config.{ Config, ConfigFactory }
-import scala.util.{ Failure, Success }
-
-
+import com.typesafe.config.{Config, ConfigFactory}
+import scala.util.{Failure, Success}
 
 
 object Main extends App
-    with RequestTimeout {
+  with RequestTimeout {
 
   val config = ConfigFactory.load()
   val host = config.getString("http.host") // 設定からホスト名とポートを取得
   val port = config.getInt("http.port")
 
   implicit val system = ActorSystem()
-  implicit val ec = system.dispatcher  // bindAndHandleは暗黙のExecutionContextが必要
+  implicit val ec = system.dispatcher // bindAndHandleは暗黙のExecutionContextが必要
 
   val api = new RestApi(system, requestTimeout(config)).routes // the RestApi provides a Route
 
@@ -33,7 +31,7 @@ object Main extends App
   val bindingFuture: Future[ServerBinding] =
     Http().bindAndHandle(api, host, port) // HTTPサーバーの起動
 
-  val log =  Logging(system.eventStream, "go-ticks")
+  val log = Logging(system.eventStream, "go-ticks")
   bindingFuture.map { serverBinding =>
     log.info(s"RestApi bound to ${serverBinding.localAddress} ")
   }.onComplete {
@@ -46,10 +44,10 @@ object Main extends App
 }
 
 
-
-
 trait RequestTimeout {
+
   import scala.concurrent.duration._
+
   def requestTimeout(config: Config): Timeout = {
     val t = config.getString("akka.http.server.request-timeout")
     val d = Duration(t)

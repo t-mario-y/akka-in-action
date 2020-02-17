@@ -12,15 +12,17 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 
 class RestApi(system: ActorSystem, timeout: Timeout)
-    extends RestRoutes {
+  extends RestRoutes {
   implicit val requestTimeout = timeout
+
   implicit def executionContext = system.dispatcher
 
   def createBoxOffice = system.actorOf(BoxOffice.props, BoxOffice.name)
 }
 
 trait RestRoutes extends BoxOfficeApi
-    with EventMarshalling {
+  with EventMarshalling {
+
   import StatusCodes._
 
   def routes: Route = eventsRoute ~ eventRoute ~ ticketsRoute
@@ -51,21 +53,20 @@ trait RestRoutes extends BoxOfficeApi
             }
           }
         } ~
-        get {
-          // GET /events/:event
-          onSuccess(getEvent(event)) {
-            _.fold(complete(NotFound))(e => complete(OK, e))
+          get {
+            // GET /events/:event
+            onSuccess(getEvent(event)) {
+              _.fold(complete(NotFound))(e => complete(OK, e))
+            }
+          } ~
+          delete {
+            // DELETE /events/:event
+            onSuccess(cancelEvent(event)) {
+              _.fold(complete(NotFound))(e => complete(OK, e))
+            }
           }
-        } ~
-        delete {
-          // DELETE /events/:event
-          onSuccess(cancelEvent(event)) {
-            _.fold(complete(NotFound))(e => complete(OK, e))
-          }
-        }
       }
     }
-
 
 
   def ticketsRoute =
@@ -75,7 +76,7 @@ trait RestRoutes extends BoxOfficeApi
           // POST /events/:event/tickets
           entity(as[TicketRequest]) { request =>
             onSuccess(requestTickets(event, request.tickets)) { tickets =>
-              if(tickets.entries.isEmpty) complete(NotFound)
+              if (tickets.entries.isEmpty) complete(NotFound)
               else complete(Created, tickets)
             }
           }
@@ -87,11 +88,13 @@ trait RestRoutes extends BoxOfficeApi
 
 
 trait BoxOfficeApi {
+
   import BoxOffice._
 
   def createBoxOffice(): ActorRef
 
   implicit def executionContext: ExecutionContext
+
   implicit def requestTimeout: Timeout
 
   lazy val boxOffice = createBoxOffice()
@@ -115,4 +118,5 @@ trait BoxOfficeApi {
     boxOffice.ask(GetTickets(event, tickets))
       .mapTo[TicketSeller.Tickets]
 }
+
 //
